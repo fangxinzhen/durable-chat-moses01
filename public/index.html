@@ -3,230 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moses's Durable Real-time Chat</title>
-    <!-- 引入 Tailwind CSS 构建现代 UI -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>首页</title>
     <style>
-        /* 滚动条美化 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* 基础极简样式，仅做视觉美化 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            width: 90%;
+            background: #ffffff;
+            padding: 40px 30px 30px 30px; /* 稍微微调了内边距 */
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        .profile-img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #eef2f6;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            color: #1a1a1a;
+            margin: 0 0 10px 0;
+        }
+        p {
+            font-size: 16px;
+            color: #666;
+            margin: 0 0 24px 0;
+        }
+        /* 按钮仅做样式渲染，不改变您原有的标签属性与事件逻辑 */
+        .btn {
+            display: inline-block;
+            background-color: #0070f3;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.2s ease;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 30px; /* 为底部的版权信息留出空间 */
+        }
+        .btn:hover {
+            background-color: #0051cb;
+        }
+        /* 版权信息样式 */
+        .copyright {
+            font-size: 12px;
+            color: #aaa;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 15px;
+            margin: 0;
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 flex flex-col h-screen overflow-hidden md:flex-row">
+<body>
 
-    <!-- 左侧：Moses 专属项目说明与展示板 -->
-    <aside class="w-full md:w-[350px] bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 text-white p-8 flex flex-col justify-between shrink-0 border-b md:border-b-0 md:border-r border-slate-800">
-        <div class="space-y-6">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-400 to-indigo-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/30">
-                    M
-                </div>
-                <div>
-                    <h2 class="text-lg font-bold tracking-wide">Moses's Space</h2>
-                    <span class="text-xs text-cyan-400 font-mono tracking-widest uppercase">Live Hub</span>
-                </div>
-            </div>
-
-            <div class="space-y-4 pt-4">
-                <h1 class="text-2xl font-black tracking-tight leading-snug text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-cyan-300">
-                    Durable Chat Room
-                </h1>
-                <p class="text-sm text-slate-300 leading-relaxed">
-                    本聊天室基于 Cloudflare <strong class="text-cyan-400 font-semibold">Durable Objects</strong> 与 WebSocket 构建。所有消息均在单个分布式进程中进行超低延迟的实时同步。
-                </p>
-            </div>
-
-            <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 space-y-2">
-                <div class="flex items-center text-xs text-slate-400 font-medium">
-                    <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-500 inline-block mr-2 animate-pulse"></span>
-                    <span id="status-text">正在建立 WebSocket 连接...</span>
-                </div>
-                <p class="text-xs text-slate-400 leading-normal">
-                    正在通过专属通道对接 Durable Object 后端节点。
-                </p>
-            </div>
-        </div>
-
-        <div class="text-xs text-slate-500 pt-6 border-t border-slate-800 flex items-center justify-between">
-            <span>Powered by Cloudflare</span>
-            <span>Moses © 2026</span>
-        </div>
-    </aside>
-
-    <!-- 右侧：核心聊天交互区域 -->
-    <main class="flex-1 flex flex-col h-full bg-slate-50 relative">
-        <!-- 聊天头部 -->
-        <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm shrink-0">
-            <div class="flex items-center space-x-3">
-                <div class="w-2 h-2 rounded-full bg-cyan-500 animate-ping"></div>
-                <span class="text-sm font-bold text-slate-800">实时广播通道</span>
-            </div>
-            <span id="room-id-badge" class="text-[10px] font-mono bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full max-w-[120px] md:max-w-[200px] truncate">
-                Room: Loading...
-            </span>
-        </header>
-
-        <!-- 聊天气泡显示区域 -->
-        <div id="chat-scroller" class="flex-1 overflow-y-auto px-4 py-6 md:px-8 space-y-6">
-            <div id="chat-messages" class="space-y-4">
-                <!-- 动态消息 -->
-            </div>
-        </div>
-
-        <!-- 底部输入框发送区域 -->
-        <footer class="bg-white border-t border-slate-200 p-4 shrink-0">
-            <form id="message-form" class="max-w-4xl mx-auto flex items-center space-x-3">
-                <div class="flex-1 relative">
-                    <input type="text" id="message-input" autocomplete="off" placeholder="正在分配身份并连接..." 
-                        class="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-2xl pl-5 pr-4 py-3.5 focus:outline-none transition-all duration-200 text-sm" />
-                </div>
-                <button type="submit" id="send-button" disabled
-                    class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-3.5 rounded-2xl font-medium shadow-md shadow-indigo-100 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 shrink-0 text-sm">
-                    发送
-                </button>
-            </form>
-        </footer>
-    </main>
-
-    <script>
-        function getAvatarColor(username) {
-            const colors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-sky-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500'];
-            let hash = 0;
-            for (let i = 0; i < username.length; i++) { hash = username.charCodeAt(i) + ((hash << 5) - hash); }
-            return colors[Math.abs(hash) % colors.length];
-        }
-
-        // 1. 解析/分配 Room ID
-        let currentRoom = window.location.pathname.slice(1);
-        if (!currentRoom) {
-            function makeId(length) {
-                var result = '';
-                var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-                var charactersLength = characters.length;
-                for (var i = 0; i < length; i++) {
-                    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-                }
-                return result;
-            }
-            // 自动补齐 32 位房间号并跳转
-            window.location.pathname = "/" + makeId(32);
-        }
-
-        document.getElementById('room-id-badge').innerText = `Room: ${currentRoom}`;
-
-        // ================= 【核心修复点】 =================
-        // 定义真实的后端 Worker 域名
-        const backendHost = "durable-chat-moses01.xinzhenfang152.workers.dev";
+    <div class="container">
+        <!-- 1. 头像/图片渲染 -->
+        <img class="profile-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="Avatar">
         
-        // 拼接 WebSocket 地址，强行指向能够完美工作的 Worker 后端，而不是当前的 Pages 静态站！
-        const wsUrl = `wss://${backendHost}/api/room/${currentRoom}/websocket`;
-        console.log("正在连接真实的后端 Worker WebSocket 地址:", wsUrl);
-        // ==================================================
+        <!-- 2. 文本内容渲染 -->
+        <h1>欢迎来到我的主页</h1>
+        <p>共享聊天室，聊天不被平台束缚，无拘无束的开聊吧。</p>
+        
+        <!-- 3. 原有逻辑按钮 -->
+        <button class="btn" onclick="yourOriginalLogic()">开始体验</button>
+        
+        <!-- 4. 版权所有声明 -->
+        <p class="copyright">© 2026 Moses. All rights reserved.</p>
+    </div>
 
-        const ws = new WebSocket(wsUrl);
-
-        const form = document.getElementById("message-form");
-        const input = document.getElementById("message-input");
-        const button = document.getElementById("send-button");
-        const messagesContainer = document.getElementById("chat-messages");
-        const scroller = document.getElementById("chat-scroller");
-        const statusDot = document.getElementById("status-dot");
-        const statusText = document.getElementById("status-text");
-
-        let currentUser = "";
-        let hasInitialized = false;
-
-        function activateChat(username) {
-            if (hasInitialized) return;
-            hasInitialized = true;
-            currentUser = username;
-            input.placeholder = `以 ${currentUser} 的身份发言...`;
-            input.removeAttribute('readonly');
-            button.removeAttribute('disabled');
-        }
-
-        ws.onopen = () => {
-            console.log("WebSocket connected successfully.");
-            statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2 animate-pulse";
-            statusText.innerText = "WebSocket 连接正常";
-
-            setTimeout(() => {
-                if (!hasInitialized) {
-                    activateChat("User_" + Math.floor(Math.random() * 1000));
-                }
-            }, 1000);
-        };
-
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-
-            if (data.type === "ready") {
-                activateChat(data.user);
-                return;
-            }
-
-            if (data.type === "message") {
-                renderBubble(data.user, data.message);
-            }
-        };
-
-        ws.onerror = (err) => {
-            console.error("WebSocket connection error:", err);
-            statusDot.className = "w-2 h-2 rounded-full bg-rose-500 inline-block mr-2";
-            statusText.innerText = "连接发生错误";
-        };
-
-        ws.onclose = () => {
-            console.log("WebSocket connection closed.");
-            statusDot.className = "w-2 h-2 rounded-full bg-slate-400 inline-block mr-2";
-            statusText.innerText = "连接已断开，请刷新重试";
-        };
-
-        function renderBubble(sender, text) {
-            const isMe = (sender === currentUser);
-            
-            const wrapper = document.createElement("div");
-            wrapper.className = `flex items-end space-x-3 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse space-x-reverse' : 'mr-auto'}`;
-
-            const avatar = document.createElement("div");
-            avatar.className = `w-8 h-8 rounded-full ${getAvatarColor(sender)} text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0`;
-            avatar.innerText = sender.charAt(0).toUpperCase();
-
-            const contentBox = document.createElement("div");
-            contentBox.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
-
-            const nameLabel = document.createElement("span");
-            nameLabel.className = "text-[11px] text-slate-400 font-medium mb-1 px-1";
-            nameLabel.innerText = sender;
-
-            const bubble = document.createElement("div");
-            if (isMe) {
-                bubble.className = "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-2xl rounded-br-none px-4 py-2.5 text-sm shadow-sm leading-relaxed whitespace-pre-wrap break-all";
-            } else {
-                bubble.className = "bg-white border border-slate-100 text-slate-700 rounded-2xl rounded-bl-none px-4 py-2.5 text-sm shadow-sm leading-relaxed whitespace-pre-wrap break-all";
-            }
-            bubble.innerText = text;
-
-            contentBox.appendChild(nameLabel);
-            contentBox.appendChild(bubble);
-
-            wrapper.appendChild(avatar);
-            wrapper.appendChild(contentBox);
-
-            messagesContainer.appendChild(wrapper);
-            scroller.scrollTop = scroller.scrollHeight;
-        }
-
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            const text = input.value.trim();
-            if (!text) return;
-
-            ws.send(JSON.stringify({ type: "message", message: text }));
-            input.value = "";
-        };
-    </script>
 </body>
 </html>
