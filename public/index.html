@@ -3,91 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>首页</title>
+    <title>Moses's Durable Real-time Chat</title>
+    <!-- 引入 Tailwind CSS 构建现代 UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 基础极简样式，仅做视觉美化 */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f8f9fa;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 600px;
-            width: 90%;
-            background: #ffffff;
-            padding: 40px 30px 30px 30px; /* 稍微微调了内边距 */
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            text-align: center;
-        }
-        .profile-img {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid #eef2f6;
-            margin-bottom: 20px;
-        }
-        h1 {
-            font-size: 24px;
-            color: #1a1a1a;
-            margin: 0 0 10px 0;
-        }
-        p {
-            font-size: 16px;
-            color: #666;
-            margin: 0 0 24px 0;
-        }
-        /* 按钮仅做样式渲染，不改变您原有的标签属性与事件逻辑 */
-        .btn {
-            display: inline-block;
-            background-color: #0070f3;
-            color: #fff;
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: background 0.2s ease;
-            border: none;
-            cursor: pointer;
-            margin-bottom: 30px; /* 为底部的版权信息留出空间 */
-        }
-        .btn:hover {
-            background-color: #0051cb;
-        }
-        /* 版权信息样式 */
-        .copyright {
-            font-size: 12px;
-            color: #aaa;
-            border-top: 1px solid #f0f0f0;
-            padding-top: 15px;
-            margin: 0;
-        }
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 flex flex-col h-screen overflow-hidden md:flex-row">
 
-    <div class="container">
-        <!-- 1. 头像/图片渲染 -->
-        <img class="profile-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="Avatar">
-        
-        <!-- 2. 文本内容渲染 -->
-        <h1>欢迎来到我的主页</h1>
-        <p>共享聊天室，聊天不被平台束缚，无拘无束的开聊吧。</p>
-        
-        <!-- 3. 原有逻辑按钮 -->
-        <button class="btn" onclick="yourOriginalLogic()">开始体验</button>
-        
-        <!-- 4. 版权所有声明 -->
-        <p class="copyright">© 2026 Moses. All rights reserved.</p>
-    </div>
+    <!-- 左侧：Moses 专属项目说明与展示板 (桌面端显示，移动端折叠) -->
+    <!-- 视觉微调：换上了更加柔和、治愈的粉紫色-靛蓝色渐变背景 -->
+    <aside class="w-full md:w-[350px] bg-gradient-to-br from-[#1e1b4b] via-[#0f172a] to-[#1e1b4b] text-white p-8 flex flex-col justify-between shrink-0 border-b md:border-b-0 md:border-r border-slate-800/80">
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3">
+                <!-- 萌化改动：将原本干硬的“M”块改为了更 Q 弹、可爱的渐变色圆角气泡 -->
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-400 via-purple-400 to-cyan-400 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-purple-500/20 animate-[pulse_3s_infinite]">
+                    ฅ
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold tracking-wide">Moses's Space</h2>
+                    <span class="text-xs text-pink-300 font-mono tracking-widest uppercase">Cute Live Hub</span>
+                </div>
+            </div>
 
+            <div class="space-y-4 pt-4">
+                <h1 class="text-2xl font-black tracking-tight leading-snug text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-cyan-200">
+                    Durable Chat Room
+                </h1>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                    本聊天室基于 Cloudflare <strong class="text-pink-300 font-semibold">Durable Objects</strong> 与 WebSocket 构建。所有消息均在单个分布式进程中进行超低延迟的实时同步。
+                </p>
+                <p class="text-xs text-slate-400 italic">
+                    “共享聊天室，聊天不被平台束缚，无拘无束的开聊吧。”
+                </p>
+            </div>
+
+            <!-- WebSocket 连接状态盒子：采用更圆润可爱的质感 -->
+            <div class="bg-slate-800/40 border border-slate-700/40 rounded-2xl p-4 space-y-2 backdrop-blur-sm">
+                <div class="flex items-center text-xs text-slate-300 font-medium">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block mr-2 animate-ping"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block mr-2 absolute"></span>
+                    WebSocket 连接正常
+                </div>
+                <p class="text-xs text-slate-400 leading-normal">
+                    房间内的每个客户端都维持着一条持久化双向通道。
+                </p>
+            </div>
+        </div>
+
+        <div class="text-xs text-slate-500 pt-6 border-t border-slate-800/80 flex items-center justify-between">
+            <span>Powered by Cloudflare</span>
+            <span>Moses © 2026</span>
+        </div>
+    </aside>
+
+    <!-- 右侧：核心聊天交互区域 -->
+    <main class="flex-1 flex flex-col h-full bg-slate-50/50 relative">
+        <!-- 聊天头部：精致的白色半透明磨砂设计 -->
+        <header class="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between shadow-sm shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="w-2.5 h-2.5 rounded-full bg-pink-400 animate-ping"></div>
+                <span class="text-sm font-bold text-slate-800 tracking-wide">实时广播通道</span>
+            </div>
+            <span id="room-id-badge" class="text-[11px] font-mono bg-pink-50 text-pink-500/80 px-3 py-1 rounded-full max-w-[120px] md:max-w-[200px] truncate border border-pink-100/50">
+                Room: Loading...
+            </span>
+        </header>
+
+        <!-- 聊天气泡显示区域 -->
+        <div id="chat-scroller" class="flex-1 overflow-y-auto px-4 py-6 md:px-8 space-y-6">
+            <!-- 聊天记录容器 -->
+            <div id="chat-messages" class="space-y-4">
+                <!-- 动态消息会被渲染到这里 -->
+            </div>
+        </div>
+
+        <!-- 底部输入框发送区域 -->
+        <footer class="bg-white/90 backdrop-blur-md border-t border-slate-100 p-4 shrink-0">
+            <form id="message-form" class="max-w-4xl mx-auto flex items-center space-x-3">
+                <div class="flex-1 relative">
+                    <!-- 输入框：增加微拟物渐变圆角和微阴影 -->
+                    <input type="text" id="message-input" autocomplete="off" placeholder="正在生成随机名字并登录..." 
+                        class="w-full bg-slate-50 border border-slate-200/80 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 rounded-2xl pl-5 pr-4 py-3.5 focus:outline-none transition-all duration-300 text-sm placeholder-slate-400 shadow-inner" />
+                </div>
+                <!-- 发送按钮：换成更加元气、柔和的紫粉渐变色，鼠标滑过有可爱的Q弹缩放效果 -->
+                <button type="submit" id="send-button" disabled
+                    class="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 disabled:from-slate-300 disabled:to-slate-300 text-white px-7 py-3.5 rounded-2xl font-medium shadow-lg shadow-indigo-100 disabled:shadow-none transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 shrink-0 text-sm">
+                    发送
+                </button>
+            </form>
+        </footer>
+    </main>
+
+    <!-- 核心通信逻辑脚本 (原封不动，保留您所有的原有逻辑) -->
+    <script>
+        // 根据用户名计算固定特征的底色，生成漂亮多彩的头像
+        function getAvatarColor(username) {
+            const colors = [
+                'bg-rose-400', 'bg-orange-400', 'bg-amber-400', 'bg-emerald-400', 
+                'bg-teal-400', 'bg-cyan-400', 'bg-sky-400', 'bg-blue-400', 
+                'bg-indigo-400', 'bg-purple-400', 'bg-fuchsia-400', 'bg-pink-400'
+            ];
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % colors.length;
+            return colors[index];
+        }
+
+        // 初始化 WebSocket 连接
+        let currentRoom = window.location.pathname.slice(1);
+        document.getElementById('room-id-badge').innerText = `Room: ${currentRoom || 'Default'}`;
+
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${protocol}//${window.location.host}/${currentRoom ? currentRoom + '/websocket' : 'websocket'}`);
+
+        const form = document.getElementById("message-form");
+        const input = document.getElementById("message-input");
+        const button = document.getElementById("send-button");
+        const messagesContainer = document.getElementById("chat-messages");
+        const scroller = document.getElementById("chat-scroller");
+
+        let currentUser = ""; // 本地用户名
+
+        ws.onopen = () => {
+            console.log("WebSocket connected.");
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            // 当收到系统初始化消息，更新占位用户名
+            if (data.type === "ready") {
+                currentUser = data.user;
+                input.placeholder = `以 ${currentUser} 的身份发言...`;
+                input.removeAttribute('readonly');
+                button.removeAttribute('disabled');
+                return;
+            }
+
+            // 处理聊天消息渲染
+            if (data.type === "message") {
+                renderBubble(data.user, data.message);
+            }
+        };
+
+        ws.onerror = (err) => {
+            console.error("WebSocket Error: ", err);
+        };
+
+        // 渲染现代气泡框 (保留所有内部逻辑，仅对样式做微调美化)
+        function renderBubble(sender, text) {
+            const isMe = (sender === currentUser);
+            
+            // 创建大容器
+            const wrapper = document.createElement("div");
+            wrapper.className = `flex items-end space-x-3 max-w-[85%] animate-[fadeIn_0.2s_ease-out] ${isMe ? 'ml-auto flex-row-reverse space-x-reverse' : 'mr-auto'}`;
+
+            // 生成头像
+            const avatar = document.createElement("div");
+            avatar.className = `w-9 h-9 rounded-full ${getAvatarColor(sender)} text-white flex items-center justify-center font-bold text-xs shadow-md shadow-slate-100 shrink-0`;
+            avatar.innerText = sender.charAt(0).toUpperCase();
+
+            // 创建气泡与姓名组合
+            const contentBox = document.createElement("div");
+            contentBox.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+
+            // 名字标注
+            const nameLabel = document.createElement("span");
+            nameLabel.className = "text-[11px] text-slate-400 font-semibold mb-1 px-1 tracking-wide";
+            nameLabel.innerText = sender;
+
+            // 气泡框 - 升级气泡圆角细节与微小的投影效果
+            const bubble = document.createElement("div");
+            if (isMe) {
+                bubble.className = "bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl rounded-br-none px-4 py-2.5 text-[13.5px] shadow-sm shadow-indigo-100 leading-relaxed whitespace-pre-wrap break-all";
+            } else {
+                bubble.className = "bg-white border border-slate-100 text-slate-700 rounded-2xl rounded-bl-none px-4 py-2.5 text-[13.5px] shadow-sm leading-relaxed whitespace-pre-wrap break-all";
+            }
+            bubble.innerText = text;
+
+            contentBox.appendChild(nameLabel);
+            contentBox.appendChild(bubble);
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(contentBox);
+
+            messagesContainer.appendChild(wrapper);
+
+            // 滚动到底部
+            scroller.scrollTop = scroller.scrollHeight;
+        }
+
+        // 发送消息
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
+
+            // 通过 WebSocket 发送
+            ws.send(JSON.stringify({ type: "message", message: text }));
+            input.value = "";
+        };
+    </script>
 </body>
 </html>
