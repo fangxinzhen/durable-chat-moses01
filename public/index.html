@@ -108,7 +108,7 @@
             return colors[index];
         }
 
-        // 随机生成备用用户名（防卡死设计）
+        // 随机生成备用用户名
         function generateRandomUsername() {
             const adjectives = ["Happy", "Sunny", "Clever", "Cool", "Swift", "Bright", "Magic"];
             const nouns = ["Panda", "Fox", "Koala", "Tiger", "Rabbit", "Deer", "Cat"];
@@ -118,17 +118,20 @@
             return `${adj}${noun}${num}`;
         }
 
-        // 获取并规范化 Room ID
+        // 1. 获取 Room ID。如果当前路径为空，则自动让页面重定向到一个特定房间。
+        // 这也是 Cloudflare 官方模板原本强制要求的逻辑（它必须在一个特定的 Room Path 下才能启动 Durable Object）
         let currentRoom = window.location.pathname.slice(1).replace(/\/$/, ""); 
-        if (!currentRoom || currentRoom === "websocket") {
-            currentRoom = "lobby";
+        if (!currentRoom || currentRoom === "websocket" || currentRoom === "api") {
+            // 如果是在根域名下，直接跳转到一个固定的公开房间，例如 /public-hall
+            window.location.replace("/public-hall");
         }
+
         document.getElementById('room-id-badge').innerText = `Room: ${currentRoom}`;
 
-        // 建立 WebSocket 路径
+        // 2. 使用原版格式严格建立 WebSocket 连接
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const wsUrl = `${protocol}//${window.location.host}/${currentRoom}/websocket`;
-        console.log("正在尝试连接 WebSocket:", wsUrl);
+        console.log("正在尝试建立标准 WebSocket 连接:", wsUrl);
         
         const ws = new WebSocket(wsUrl);
 
@@ -143,7 +146,6 @@
         let currentUser = ""; // 本地分配到的用户名
         let hasInitialized = false;
 
-        // 激活聊天界面函数（只要 WebSocket 连上了，不管后端回不回 ready，都必须强制开通）
         function activateChat(username) {
             if (hasInitialized) return;
             hasInitialized = true;
@@ -158,10 +160,9 @@
             statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2 animate-pulse";
             statusText.innerText = "WebSocket 连接正常";
 
-            // 安全兜底：如果连接建立后 1 秒内后端没发来 ready 消息，则前端本地生成临时名字登录，不让用户卡死！
+            // 1秒安全兜底
             setTimeout(() => {
                 if (!hasInitialized) {
-                    console.log("触发本地兜底用户名分配");
                     activateChat(generateRandomUsername());
                 }
             }, 1000);
@@ -170,13 +171,11 @@
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
-            // 如果后端正确发来了 ready，使用后端分配的名字
             if (data.type === "ready") {
                 activateChat(data.user);
                 return;
             }
 
-            // 处理聊天消息渲染
             if (data.type === "message") {
                 renderBubble(data.user, data.message);
             }
@@ -199,25 +198,20 @@
         function renderBubble(sender, text) {
             const isMe = (sender === currentUser);
             
-            // 创建大容器
             const wrapper = document.createElement("div");
             wrapper.className = `flex items-end space-x-3 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse space-x-reverse' : 'mr-auto'}`;
 
-            // 生成头像
             const avatar = document.createElement("div");
             avatar.className = `w-8 h-8 rounded-full ${getAvatarColor(sender)} text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0`;
             avatar.innerText = sender.charAt(0).toUpperCase();
 
-            // 创建气泡与姓名组合
             const contentBox = document.createElement("div");
             contentBox.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
 
-            // 名字标注
             const nameLabel = document.createElement("span");
             nameLabel.className = "text-[11px] text-slate-400 font-medium mb-1 px-1";
             nameLabel.innerText = sender;
 
-            // 气泡框
             const bubble = document.createElement("div");
             if (isMe) {
                 bubble.className = "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-2xl rounded-br-none px-4 py-2.5 text-sm shadow-sm leading-relaxed whitespace-pre-wrap break-all";
@@ -233,18 +227,14 @@
             wrapper.appendChild(contentBox);
 
             messagesContainer.appendChild(wrapper);
-
-            // 滚动到底部
             scroller.scrollTop = scroller.scrollHeight;
         }
 
-        // 发送消息
         form.onsubmit = (e) => {
             e.preventDefault();
             const text = input.value.trim();
             if (!text) return;
 
-            // 通过 WebSocket 发送
             ws.send(JSON.stringify({ type: "message", message: text }));
             input.value = "";
         };
