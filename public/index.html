@@ -40,8 +40,8 @@
 
             <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 space-y-2">
                 <div class="flex items-center text-xs text-slate-400 font-medium">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2 animate-pulse"></span>
-                    WebSocket 连接正常
+                    <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-500 inline-block mr-2 animate-pulse"></span>
+                    <span id="status-text">正在建立 WebSocket 连接...</span>
                 </div>
                 <p class="text-xs text-slate-400 leading-normal">
                     房间内的每个客户端都维持着一条持久化双向通道。
@@ -80,11 +80,11 @@
         <footer class="bg-white border-t border-slate-200 p-4 shrink-0">
             <form id="message-form" class="max-w-4xl mx-auto flex items-center space-x-3">
                 <div class="flex-1 relative">
-                    <input type="text" id="message-input" autocomplete="off" placeholder="正在生成随机名字并登录..." 
+                    <input type="text" id="message-input" autocomplete="off" placeholder="正在连接服务器并分配身份..." 
                         class="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-2xl pl-5 pr-4 py-3.5 focus:outline-none transition-all duration-200 text-sm" />
                 </div>
                 <button type="submit" id="send-button" disabled
-                    class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white px-6 py-3.5 rounded-2xl font-medium shadow-md shadow-indigo-100 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 shrink-0 text-sm">
+                    class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-3.5 rounded-2xl font-medium shadow-md shadow-indigo-100 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 shrink-0 text-sm">
                     发送
                 </button>
             </form>
@@ -108,29 +108,41 @@
             return colors[index];
         }
 
-        // 初始化 WebSocket 连接
-        let currentRoom = window.location.pathname.slice(1);
-        document.getElementById('room-id-badge').innerText = `Room: ${currentRoom || 'Default'}`;
+        // 1. 获取并规范化 Room ID
+        let currentRoom = window.location.pathname.slice(1).replace(/\/$/, ""); 
+        // 如果没有房间号（即直接访问根域名），默认给它一个大厅房间名 'lobby' 避免空路由 Bug
+        if (!currentRoom || currentRoom === "websocket") {
+            currentRoom = "lobby";
+        }
+        document.getElementById('room-id-badge').innerText = `Room: ${currentRoom}`;
 
+        // 2. 建立 WebSocket 路径（确保正确路由到 Cloudflare Worker 后端对应的房间 DO）
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const ws = new WebSocket(`${protocol}//${window.location.host}/${currentRoom ? currentRoom + '/websocket' : 'websocket'}`);
+        const wsUrl = `${protocol}//${window.location.host}/${currentRoom}/websocket`;
+        console.log("正在尝试连接 WebSocket:", wsUrl);
+        
+        const ws = new WebSocket(wsUrl);
 
         const form = document.getElementById("message-form");
         const input = document.getElementById("message-input");
         const button = document.getElementById("send-button");
         const messagesContainer = document.getElementById("chat-messages");
         const scroller = document.getElementById("chat-scroller");
+        const statusDot = document.getElementById("status-dot");
+        const statusText = document.getElementById("status-text");
 
-        let currentUser = ""; // 本地用户名
+        let currentUser = ""; // 本地分配到的用户名
 
         ws.onopen = () => {
-            console.log("WebSocket connected.");
+            console.log("WebSocket 连接成功！");
+            statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2 animate-pulse";
+            statusText.innerText = "WebSocket 连接正常";
         };
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
-            // 当收到系统初始化消息，更新占位用户名
+            // 当收到系统初始化消息，更新占位用户名，并解锁输入框和发送按钮
             if (data.type === "ready") {
                 currentUser = data.user;
                 input.placeholder = `以 ${currentUser} 的身份发言...`;
@@ -146,7 +158,16 @@
         };
 
         ws.onerror = (err) => {
-            console.error("WebSocket Error: ", err);
+            console.error("WebSocket 连接发生错误: ", err);
+            statusDot.className = "w-2 h-2 rounded-full bg-rose-500 inline-block mr-2";
+            statusText.innerText = "连接发生错误";
+        };
+
+        ws.onclose = () => {
+            console.log("WebSocket 连接已断开");
+            statusDot.className = "w-2 h-2 rounded-full bg-slate-400 inline-block mr-2";
+            statusText.innerText = "连接已断开，请刷新重试";
+            button.setAttribute('disabled', 'true');
         };
 
         // 渲染现代气泡框
@@ -155,7 +176,7 @@
             
             // 创建大容器
             const wrapper = document.createElement("div");
-            wrapper.className = `flex items-end space-x-3 max-w-[85%] animate-[fadeIn_0.2s_ease-out] ${isMe ? 'ml-auto flex-row-reverse space-x-reverse' : 'mr-auto'}`;
+            wrapper.className = `flex items-end space-x-3 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse space-x-reverse' : 'mr-auto'}`;
 
             // 生成头像
             const avatar = document.createElement("div");
