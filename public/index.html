@@ -108,15 +108,24 @@
             return colors[index];
         }
 
-        // 1. 获取并规范化 Room ID
+        // 随机生成备用用户名（防卡死设计）
+        function generateRandomUsername() {
+            const adjectives = ["Happy", "Sunny", "Clever", "Cool", "Swift", "Bright", "Magic"];
+            const nouns = ["Panda", "Fox", "Koala", "Tiger", "Rabbit", "Deer", "Cat"];
+            const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+            const noun = nouns[Math.floor(Math.random() * nouns.length)];
+            const num = Math.floor(Math.random() * 900) + 100;
+            return `${adj}${noun}${num}`;
+        }
+
+        // 获取并规范化 Room ID
         let currentRoom = window.location.pathname.slice(1).replace(/\/$/, ""); 
-        // 如果没有房间号（即直接访问根域名），默认给它一个大厅房间名 'lobby' 避免空路由 Bug
         if (!currentRoom || currentRoom === "websocket") {
             currentRoom = "lobby";
         }
         document.getElementById('room-id-badge').innerText = `Room: ${currentRoom}`;
 
-        // 2. 建立 WebSocket 路径（确保正确路由到 Cloudflare Worker 后端对应的房间 DO）
+        // 建立 WebSocket 路径
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const wsUrl = `${protocol}//${window.location.host}/${currentRoom}/websocket`;
         console.log("正在尝试连接 WebSocket:", wsUrl);
@@ -132,22 +141,38 @@
         const statusText = document.getElementById("status-text");
 
         let currentUser = ""; // 本地分配到的用户名
+        let hasInitialized = false;
+
+        // 激活聊天界面函数（只要 WebSocket 连上了，不管后端回不回 ready，都必须强制开通）
+        function activateChat(username) {
+            if (hasInitialized) return;
+            hasInitialized = true;
+            currentUser = username;
+            input.placeholder = `以 ${currentUser} 的身份发言...`;
+            input.removeAttribute('readonly');
+            button.removeAttribute('disabled');
+        }
 
         ws.onopen = () => {
             console.log("WebSocket 连接成功！");
             statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2 animate-pulse";
             statusText.innerText = "WebSocket 连接正常";
+
+            // 安全兜底：如果连接建立后 1 秒内后端没发来 ready 消息，则前端本地生成临时名字登录，不让用户卡死！
+            setTimeout(() => {
+                if (!hasInitialized) {
+                    console.log("触发本地兜底用户名分配");
+                    activateChat(generateRandomUsername());
+                }
+            }, 1000);
         };
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
-            // 当收到系统初始化消息，更新占位用户名，并解锁输入框和发送按钮
+            // 如果后端正确发来了 ready，使用后端分配的名字
             if (data.type === "ready") {
-                currentUser = data.user;
-                input.placeholder = `以 ${currentUser} 的身份发言...`;
-                input.removeAttribute('readonly');
-                button.removeAttribute('disabled');
+                activateChat(data.user);
                 return;
             }
 
