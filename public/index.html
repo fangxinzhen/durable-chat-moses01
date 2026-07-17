@@ -16,7 +16,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 flex flex-col h-screen overflow-hidden md:flex-row">
 
-    <!-- 左侧：Moses 专属项目说明与展示板 (桌面端显示，移动端折叠) -->
+    <!-- 左侧：Moses 专属项目说明与展示板 -->
     <aside class="w-full md:w-[350px] bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 text-white p-8 flex flex-col justify-between shrink-0 border-b md:border-b-0 md:border-r border-slate-800">
         <div class="space-y-6">
             <div class="flex items-center space-x-3">
@@ -44,7 +44,7 @@
                     <span id="status-text">正在建立 WebSocket 连接...</span>
                 </div>
                 <p class="text-xs text-slate-400 leading-normal">
-                    房间内的每个客户端都维持着一条持久化双向通道。
+                    每个客户端都在通过专用通道实现长连接通信。
                 </p>
             </div>
         </div>
@@ -118,20 +118,20 @@
             return `${adj}${noun}${num}`;
         }
 
-        // 1. 获取 Room ID。如果当前路径为空，则自动让页面重定向到一个特定房间。
-        // 这也是 Cloudflare 官方模板原本强制要求的逻辑（它必须在一个特定的 Room Path 下才能启动 Durable Object）
-        let currentRoom = window.location.pathname.slice(1).replace(/\/$/, ""); 
+        // 1. 严格匹配原版后端的路由。Durable Chat App 默认会读取路径后面的第一段作为 RoomID。
+        let currentRoom = window.location.pathname.slice(1).split('/')[0].replace(/\/$/, ""); 
+        
+        // 如果是在根路径打开，由于没有 Room，必须重定向到固定大厅，否则 Worker 无法实例化对应的 Durable Object
         if (!currentRoom || currentRoom === "websocket" || currentRoom === "api") {
-            // 如果是在根域名下，直接跳转到一个固定的公开房间，例如 /public-hall
-            window.location.replace("/public-hall");
+            window.location.replace("/lobby");
         }
 
         document.getElementById('room-id-badge').innerText = `Room: ${currentRoom}`;
 
-        // 2. 使用原版格式严格建立 WebSocket 连接
+        // 2. 拼接原版后端硬编码写死的 API 路由格式： `/api/room/{roomName}/websocket`
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/${currentRoom}/websocket`;
-        console.log("正在尝试建立标准 WebSocket 连接:", wsUrl);
+        const wsUrl = `${protocol}//${window.location.host}/api/room/${currentRoom}/websocket`;
+        console.log("最终请求建立的 WebSocket 地址:", wsUrl);
         
         const ws = new WebSocket(wsUrl);
 
@@ -143,7 +143,7 @@
         const statusDot = document.getElementById("status-dot");
         const statusText = document.getElementById("status-text");
 
-        let currentUser = ""; // 本地分配到的用户名
+        let currentUser = ""; 
         let hasInitialized = false;
 
         function activateChat(username) {
@@ -156,16 +156,16 @@
         }
 
         ws.onopen = () => {
-            console.log("WebSocket 连接成功！");
+            console.log("WebSocket 握手连接成功！");
             statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2 animate-pulse";
             statusText.innerText = "WebSocket 连接正常";
 
-            // 1秒安全兜底
+            // 1.5 秒兜底激活机制，防止后端冷启动未分配 ready 消息
             setTimeout(() => {
                 if (!hasInitialized) {
                     activateChat(generateRandomUsername());
                 }
-            }, 1000);
+            }, 1500);
         };
 
         ws.onmessage = (event) => {
@@ -182,19 +182,19 @@
         };
 
         ws.onerror = (err) => {
-            console.error("WebSocket 连接发生错误: ", err);
+            console.error("WebSocket 连接异常:", err);
             statusDot.className = "w-2 h-2 rounded-full bg-rose-500 inline-block mr-2";
             statusText.innerText = "连接发生错误";
         };
 
         ws.onclose = () => {
-            console.log("WebSocket 连接已断开");
+            console.log("WebSocket 通道关闭");
             statusDot.className = "w-2 h-2 rounded-full bg-slate-400 inline-block mr-2";
             statusText.innerText = "连接已断开，请刷新重试";
             button.setAttribute('disabled', 'true');
         };
 
-        // 渲染现代气泡框
+        // 渲染气泡
         function renderBubble(sender, text) {
             const isMe = (sender === currentUser);
             
