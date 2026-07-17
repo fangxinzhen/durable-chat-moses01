@@ -44,7 +44,7 @@
                     <span id="status-text">正在建立 WebSocket 连接...</span>
                 </div>
                 <p class="text-xs text-slate-400 leading-normal">
-                    每个客户端都在通过专用通道实现长连接通信。
+                    正在通过专属通道对接 Durable Object 后端节点。
                 </p>
             </div>
         </div>
@@ -70,9 +70,8 @@
 
         <!-- 聊天气泡显示区域 -->
         <div id="chat-scroller" class="flex-1 overflow-y-auto px-4 py-6 md:px-8 space-y-6">
-            <!-- 聊天记录容器 -->
             <div id="chat-messages" class="space-y-4">
-                <!-- 动态消息会被渲染到这里 -->
+                <!-- 动态消息 -->
             </div>
         </div>
 
@@ -80,7 +79,7 @@
         <footer class="bg-white border-t border-slate-200 p-4 shrink-0">
             <form id="message-form" class="max-w-4xl mx-auto flex items-center space-x-3">
                 <div class="flex-1 relative">
-                    <input type="text" id="message-input" autocomplete="off" placeholder="正在连接服务器并分配身份..." 
+                    <input type="text" id="message-input" autocomplete="off" placeholder="正在分配身份并连接..." 
                         class="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-2xl pl-5 pr-4 py-3.5 focus:outline-none transition-all duration-200 text-sm" />
                 </div>
                 <button type="submit" id="send-button" disabled
@@ -91,48 +90,41 @@
         </footer>
     </main>
 
-    <!-- 核心通信逻辑脚本 -->
     <script>
-        // 根据用户名计算固定特征的底色，生成漂亮多彩的头像
         function getAvatarColor(username) {
-            const colors = [
-                'bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 
-                'bg-teal-500', 'bg-cyan-500', 'bg-sky-500', 'bg-blue-500', 
-                'bg-indigo-500', 'bg-purple-500', 'bg-fuchsia-500', 'bg-pink-500'
-            ];
+            const colors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-sky-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500'];
             let hash = 0;
-            for (let i = 0; i < username.length; i++) {
-                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+            for (let i = 0; i < username.length; i++) { hash = username.charCodeAt(i) + ((hash << 5) - hash); }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        // 1. 解析/分配 Room ID
+        let currentRoom = window.location.pathname.slice(1);
+        if (!currentRoom) {
+            function makeId(length) {
+                var result = '';
+                var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                var charactersLength = characters.length;
+                for (var i = 0; i < length; i++) {
+                    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+                }
+                return result;
             }
-            const index = Math.abs(hash) % colors.length;
-            return colors[index];
-        }
-
-        // 随机生成备用用户名
-        function generateRandomUsername() {
-            const adjectives = ["Happy", "Sunny", "Clever", "Cool", "Swift", "Bright", "Magic"];
-            const nouns = ["Panda", "Fox", "Koala", "Tiger", "Rabbit", "Deer", "Cat"];
-            const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-            const noun = nouns[Math.floor(Math.random() * nouns.length)];
-            const num = Math.floor(Math.random() * 900) + 100;
-            return `${adj}${noun}${num}`;
-        }
-
-        // 1. 严格匹配原版后端的路由。Durable Chat App 默认会读取路径后面的第一段作为 RoomID。
-        let currentRoom = window.location.pathname.slice(1).split('/')[0].replace(/\/$/, ""); 
-        
-        // 如果是在根路径打开，由于没有 Room，必须重定向到固定大厅，否则 Worker 无法实例化对应的 Durable Object
-        if (!currentRoom || currentRoom === "websocket" || currentRoom === "api") {
-            window.location.replace("/lobby");
+            // 自动补齐 32 位房间号并跳转
+            window.location.pathname = "/" + makeId(32);
         }
 
         document.getElementById('room-id-badge').innerText = `Room: ${currentRoom}`;
 
-        // 2. 拼接原版后端硬编码写死的 API 路由格式： `/api/room/{roomName}/websocket`
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/api/room/${currentRoom}/websocket`;
-        console.log("最终请求建立的 WebSocket 地址:", wsUrl);
+        // ================= 【核心修复点】 =================
+        // 定义真实的后端 Worker 域名
+        const backendHost = "durable-chat-moses01.xinzhenfang152.workers.dev";
         
+        // 拼接 WebSocket 地址，强行指向能够完美工作的 Worker 后端，而不是当前的 Pages 静态站！
+        const wsUrl = `wss://${backendHost}/api/room/${currentRoom}/websocket`;
+        console.log("正在连接真实的后端 Worker WebSocket 地址:", wsUrl);
+        // ==================================================
+
         const ws = new WebSocket(wsUrl);
 
         const form = document.getElementById("message-form");
@@ -143,7 +135,7 @@
         const statusDot = document.getElementById("status-dot");
         const statusText = document.getElementById("status-text");
 
-        let currentUser = ""; 
+        let currentUser = "";
         let hasInitialized = false;
 
         function activateChat(username) {
@@ -156,16 +148,15 @@
         }
 
         ws.onopen = () => {
-            console.log("WebSocket 握手连接成功！");
+            console.log("WebSocket connected successfully.");
             statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2 animate-pulse";
             statusText.innerText = "WebSocket 连接正常";
 
-            // 1.5 秒兜底激活机制，防止后端冷启动未分配 ready 消息
             setTimeout(() => {
                 if (!hasInitialized) {
-                    activateChat(generateRandomUsername());
+                    activateChat("User_" + Math.floor(Math.random() * 1000));
                 }
-            }, 1500);
+            }, 1000);
         };
 
         ws.onmessage = (event) => {
@@ -182,19 +173,17 @@
         };
 
         ws.onerror = (err) => {
-            console.error("WebSocket 连接异常:", err);
+            console.error("WebSocket connection error:", err);
             statusDot.className = "w-2 h-2 rounded-full bg-rose-500 inline-block mr-2";
             statusText.innerText = "连接发生错误";
         };
 
         ws.onclose = () => {
-            console.log("WebSocket 通道关闭");
+            console.log("WebSocket connection closed.");
             statusDot.className = "w-2 h-2 rounded-full bg-slate-400 inline-block mr-2";
             statusText.innerText = "连接已断开，请刷新重试";
-            button.setAttribute('disabled', 'true');
         };
 
-        // 渲染气泡
         function renderBubble(sender, text) {
             const isMe = (sender === currentUser);
             
